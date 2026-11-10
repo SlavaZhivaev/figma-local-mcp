@@ -1,0 +1,799 @@
+<!doctype html><meta charset="utf-8">
+<style>
+:root{
+  --bg:var(--figma-color-bg,#fff);
+  --fg:var(--figma-color-text,#1b1f26);
+  --muted:var(--figma-color-text-secondary,#6b7280);
+  --line:var(--figma-color-border,#e3e6eb);
+  --field:var(--figma-color-bg-secondary,#fff);
+  --brand:var(--figma-color-bg-brand,#2563eb);
+  --brand-fg:var(--figma-color-text-onbrand,#fff);
+  --ok:#12a150; --warn:#d97706; --err:#dc2626;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:18px 18px 12px;background:var(--bg);color:var(--fg);
+  font:12px/1.45 Inter,-apple-system,BlinkMacSystemFont,"SF Pro Text",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased}
+p.hint{margin:0 0 16px;color:var(--muted)}
+p.hint code{font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  background:color-mix(in srgb,var(--fg) 8%,transparent);padding:2px 5px;border-radius:4px;
+  white-space:nowrap}
+label{display:block;margin-bottom:10px}
+label span{display:block;font-size:11px;font-weight:550;color:var(--muted);margin-bottom:5px}
+.note{margin:6px 0 0;font-size:11px;line-height:1.4;color:var(--muted);opacity:.85}
+input{width:100%;height:32px;padding:0 10px;border:1px solid var(--line);border-radius:7px;
+  background:var(--field);color:var(--fg);font:12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+  outline:none;transition:border-color .15s,box-shadow .15s}
+input::placeholder{color:var(--muted);opacity:.7;font-family:Inter,sans-serif}
+input:focus{border-color:var(--brand);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 20%,transparent)}
+input:disabled{opacity:.55;cursor:default}
+button{width:100%;height:34px;margin-top:4px;border:0;border-radius:7px;
+  background:var(--brand);color:var(--brand-fg);font:550 12px Inter,sans-serif;cursor:pointer;
+  transition:filter .15s}
+button:hover:not(:disabled){filter:brightness(1.08)}
+button:active:not(:disabled){filter:brightness(.94)}
+button:disabled{opacity:.45;cursor:default}
+#reset{background:transparent;color:var(--fg);border:1px solid var(--line)}
+#status{display:flex;gap:6px;align-items:flex-start;margin-top:12px;padding-top:12px;
+  border-top:1px solid var(--line);color:var(--muted);min-height:34px}
+#status::before{content:"";width:5px;height:5px;border-radius:50%;margin-top:6px;flex:none;
+  background:currentColor;opacity:.55}
+body.on #status{color:var(--ok)}
+body.err #status{color:var(--err)}
+html,body{height:100%}
+body{overflow:auto}
+.bar{display:flex;justify-content:flex-end;gap:4px;margin:-8px -8px 6px 0}
+.icon{width:26px;height:26px;margin:0;padding:0;display:grid;place-items:center;flex:none;
+  background:transparent;color:var(--muted);border:0;border-radius:6px}
+.icon:hover:not(:disabled){filter:none;background:color-mix(in srgb,var(--fg) 8%,transparent);color:var(--fg)}
+.icon svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+#grip{position:fixed;right:0;bottom:0;width:16px;height:16px;cursor:nwse-resize;touch-action:none;
+  background:linear-gradient(135deg,transparent 0 55%,var(--line) 55% 62%,transparent 62% 75%,var(--line) 75% 82%,transparent 82%)}
+#mini{display:none}
+body.mini{padding:0 6px 0 12px;overflow:hidden}
+body.mini #full,body.mini #grip{display:none}
+body.mini #mini{display:flex;align-items:center;gap:4px;height:100vh}
+body.mini #mini #status{flex:1;min-width:0;margin:0;padding:0;border:0;min-height:0;align-items:center;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+body.mini #mini #status::before{display:inline-block;vertical-align:middle;margin:0 7px 2px 0}
+/* Connected: the pairing form is done with - show the status and the Run bar right away. */
+body.on:not(.editing) #full p.hint, body.on:not(.editing) #full label, body.on:not(.editing) #connect, body.on:not(.editing) #reset{display:none}
+#editconn{display:none;width:auto;height:auto;margin:12px 0 0;padding:0;background:none;color:var(--muted);font:11px Inter,sans-serif;cursor:pointer;opacity:.8}
+#editconn:hover{filter:none;opacity:1;text-decoration:underline}
+body.on:not(.editing) #editconn{display:inline-block}
+body.on:not(.editing) #status{margin:0;padding:0;border:0;min-height:0;font-weight:550}
+body.on:not(.editing) .bar{position:absolute;top:10px;right:10px;margin:0}
+body.on:not(.editing) #status{padding-right:58px;align-items:center}
+body.on:not(.editing) #status::before{margin-top:0}
+#linkrow{display:none;align-items:center;gap:8px;margin-top:8px;font-size:11px;color:var(--muted)}
+#linkrow.on{display:flex}
+#linkrow span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#linkrow select{height:26px;max-width:150px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--fg);font:11px Inter,sans-serif}
+#codehint{display:none;margin-top:10px;padding:10px 12px;border:1px dashed var(--line);border-radius:8px;color:var(--muted);font-size:11px;line-height:1.45}
+body.on:not(.editing):not(.hascode) #codehint{display:block}
+#codebar{display:none;align-items:center;gap:8px;margin-top:10px;padding:8px 8px 8px 10px;border:1px solid var(--line);border-radius:8px}
+#codebar.on{display:flex}
+#codebar span{flex:1;min-width:0;font-weight:550;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#codebar button{width:auto;height:28px;margin:0;padding:0 12px;flex:none}
+#mkproto{display:none;width:100%;height:28px;margin-top:6px;background:transparent;color:var(--fg);border:1px solid var(--line);font:11px Inter,sans-serif}
+body.on:not(.editing).hascode #mkproto{display:block}
+#minirun{display:none}
+body.mini #minirun.on{display:grid;color:var(--brand)}
+#runner{display:none;position:fixed;inset:0;z-index:20;background:var(--bg);flex-direction:column}
+body.playing #runner{display:flex}
+body.playing #full,body.playing #mini,body.playing #grip{display:none!important}
+body.playing{padding:0;overflow:hidden}
+.rhead{height:36px;flex:none;display:flex;align-items:center;gap:4px;padding:0 6px 0 8px;border-bottom:1px solid var(--line)}
+.rhead span{flex:1;min-width:0;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rhead small{color:var(--muted);margin-right:4px}
+.rhead select{height:26px;max-width:180px;border:1px solid var(--line);border-radius:6px;background:var(--field);color:var(--fg);font:12px Inter,sans-serif}
+#rstage{flex:1;overflow:auto;background:color-mix(in srgb,var(--fg) 4%,transparent)}
+#rframe{display:block;border:0;background:#fff;transform-origin:0 0}
+.rhead .icon.on{background:color-mix(in srgb,var(--brand) 16%,transparent);color:var(--brand)}
+#rstage{position:relative}
+#pickbar{display:none;position:absolute;left:8px;right:8px;top:44px;z-index:5;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);box-shadow:0 6px 24px rgba(0,0,0,.18)}
+#pickbar.on{display:block}
+#pickwhat{font-size:11px;color:var(--muted);margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#picknote{width:100%;min-height:52px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--field);color:var(--fg);font:12px/1.4 Inter,sans-serif;resize:vertical;outline:none}
+#picknote:focus{border-color:var(--brand)}
+#pickbar .row{display:flex;gap:6px;margin-top:6px}
+#pickbar .row button{height:28px;margin:0}
+#pickcancel{background:transparent;color:var(--fg);border:1px solid var(--line)}
+#rtoast{display:none;position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:5;padding:6px 12px;border-radius:7px;background:#1b1f26;color:#fff;font-size:11px;white-space:nowrap}
+#rtoast.on{display:block}
+</style>
+
+<div id="full">
+<div class="bar"><button class="icon" id="collapse" title="Свернуть в полоску"><svg viewBox="0 0 16 16"><path d="M4 10l4-4 4 4"/></svg></button><button class="icon hide" title="Скрыть окно — плагин продолжит работать"><svg viewBox="0 0 16 16"><path d="M2 8s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4z"/><path d="M3 13L13 3"/></svg></button></div>
+<p class="hint">Спросите адрес и ключ у ИИшки — она возьмёт их командой <code>figma_status</code></p>
+
+<label><span>Адрес</span><input id="url" placeholder="вставьте адрес" spellcheck="false" autocomplete="off"></label>
+<label><span>Ключ</span><input id="token" type="password" placeholder="вставьте ключ" autocomplete="off">
+<p class="note">Ключ постоянный: вставьте один раз, дальше плагин подключается сам.</p></label>
+<button id="connect">Подключиться</button>
+<button id="reset">Сбросить подключение</button>
+<div id="status">Ожидание подключения</div>
+<div id="codebar"><span id="codename"></span><button id="runcode">▶ Запустить</button></div>
+<button id="mkproto" title="Собрать из экранов обычный прототип Figma: играет кнопкой ▶ без плагина">Сделать прототип Figma</button>
+<div id="linkrow"><span id="linkname"></span><select id="linksel" title="Куда ведёт этот блок в прототипе"></select></div>
+<div id="codehint">Выделите слой кода на холсте — здесь появится кнопка «▶ Запустить».</div>
+<button id="editconn">Изменить подключение</button>
+</div>
+<div id="mini"><button class="icon" id="minirun" title="Запустить слой кода"><svg viewBox="0 0 16 16"><path d="M5 3l8 5-8 5z"/></svg></button><button class="icon" id="expand" title="Развернуть"><svg viewBox="0 0 16 16"><path d="M4 6l4 4 4-4"/></svg></button><button class="icon hide" title="Скрыть окно — плагин продолжит работать"><svg viewBox="0 0 16 16"><path d="M2 8s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4z"/><path d="M3 13L13 3"/></svg></button></div>
+<div id="grip" title="Потяните, чтобы изменить размер"></div>
+<div id="runner"><div class="rhead"><button class="icon" id="rback" title="Назад (Alt+←)" disabled><svg viewBox="0 0 16 16"><path d="M10 3L5 8l5 5"/></svg></button><span id="rname"></span><select id="rpages" title="Страница" hidden></select><small id="rscale"></small><button class="icon" id="rpick" title="Указать элемент и написать ИИ, что в нём поменять"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="5"/><path d="M8 1v3M8 12v3M1 8h3M12 8h3"/></svg></button><button class="icon" id="rshot" title="Снять текущее состояние в макет — редактируемыми слоями рядом со слоем кода"><svg viewBox="0 0 16 16"><path d="M2 5.5h2.5L6 3.5h4l1.5 2H14v7H2z"/><circle cx="8" cy="9" r="2.3"/></svg></button><button class="icon" id="rreload" title="Запустить заново"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 3v3h-3"/></svg></button><button class="icon" id="rclose" title="Закрыть"><svg viewBox="0 0 16 16"><path d="M4 4l8 8M12 4l-8 8"/></svg></button></div><div id="rstage"><iframe id="rframe" sandbox="allow-scripts allow-forms allow-modals allow-popups allow-downloads"></iframe></div><div id="pickbar"><div id="pickwhat"></div><textarea id="picknote" placeholder="Что поменять? Например: сделать кнопку зелёной и подпись «Отправить»"></textarea><div class="row"><button id="picksave">Сохранить для ИИ</button><button id="pickcancel">Отмена</button></div></div><div id="rtoast"></div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+/*__FIGMA_CONNECTION__*/
+let connection;
+const session=typeof crypto.randomUUID==='function' ? crypto.randomUUID() : 'figma-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const post=m=>parent.postMessage({pluginMessage:m},'*');
+let ui={mini:false,w:380,h:370}, hidden=false, shown='';
+function setStatus(text,state){
+ $('status').textContent=text; $('status').title=text;
+ const wasOn=document.body.classList.contains('on');
+ document.body.classList.toggle('on',state==='on');
+ if(wasOn!==(state==='on') && !document.body.classList.contains('playing')) setTimeout(applyUi,0);
+ document.body.classList.toggle('err',state==='err');
+ // A hidden window cannot show anything, so report only the changes that matter.
+ const kind=state||'idle';
+ if(hidden && kind!==shown && kind!=='idle') post({type:'notify',text:'Figma Local MCP: '+text,error:kind==='err'});
+ shown=kind;
+}
+const MINI={w:300,h:44};
+function applyUi(){
+ document.body.classList.toggle('mini',ui.mini);
+ // The status line lives in whichever view is visible.
+ if(ui.mini) $('mini').insertBefore($('status'), $('mini').firstChild); else $('full').insertBefore($('status'), $('codebar'));
+ const compact=document.body.classList.contains('on') && !document.body.classList.contains('editing');
+ const size=ui.mini ? MINI : compact ? {w:320, h:Math.min(340, Math.ceil($('full').getBoundingClientRect().height)+36)} : {w:ui.w,h:ui.h};
+ post({type:'resize',w:size.w,h:size.h});
+ // Text reflows once the new width applies: measure again when it has settled.
+ if(compact && !ui.mini && !applyUi.again){ applyUi.again=true; setTimeout(()=>{ applyUi(); applyUi.again=false; }, 120); }
+}
+function saveUi(){post({type:'saveUi',value:ui});}
+$('collapse').onclick=()=>{ui.mini=true;applyUi();saveUi();};
+$('expand').onclick=()=>{ui.mini=false;applyUi();saveUi();};
+for(const b of document.querySelectorAll('.hide')) b.onclick=()=>{
+ hidden=true;shown=document.body.classList.contains('err')?'err':document.body.classList.contains('on')?'on':'idle';
+ post({type:'hide'});
+};
+(()=>{
+ const g=$('grip');let start=null,frame=0;
+ g.onpointerdown=e=>{start={x:e.screenX,y:e.screenY,w:window.innerWidth,h:window.innerHeight};g.setPointerCapture(e.pointerId);e.preventDefault();};
+ g.onpointermove=e=>{
+  if(!start)return;
+  ui.w=Math.max(260,Math.round(start.w+e.screenX-start.x));ui.h=Math.max(200,Math.round(start.h+e.screenY-start.y));
+  if(!frame)frame=requestAnimationFrame(()=>{frame=0;post({type:'resize',w:ui.w,h:ui.h});});
+ };
+ g.onpointerup=g.onpointercancel=()=>{if(start){start=null;saveUi();}};
+})();
+function lock(on){$('connect').disabled=on;$('url').disabled=on;$('token').disabled=on;}
+window.onmessage=e=>{
+ if(!(e.source===parent || (e.origin==='https://www.figma.com' && e.source===window.parent.parent.parent)))return;
+ const m=e.data && e.data.pluginMessage; if(!m)return;
+ if(m.type==='info'){connection.fileInfo=m;return;}
+ // Figma reloads the plugin on every file change, so the pairing comes back from clientStorage.
+ if(m.type==='restore'){if(m.ui){ui=Object.assign(ui,m.ui);applyUi();}if(!connection.running && m.value && m.value.url && m.value.token){$('url').value=m.value.url;$('token').value=m.value.token;$('connect').click();}return;}
+ const pending=connection.pending;
+ if(pending && m.id===pending.id){ if(pending.later && m.result && m.result.id) queuePreview(m.result.id, pending.later); connection.acceptResult(m); }
+};
+let lastVis=null;
+function reportVis(){
+ const value=document.visibilityState==='visible';
+ if(value===lastVis || !connection || !connection.running)return;
+ lastVis=value;connection.ping(value).catch(()=>{lastVis=null;});
+}
+document.addEventListener('visibilitychange',reportVis);setInterval(reportVis,1000);
+// Drawing needs a visible window: ask Figma to show the plugin and wait for it (the server brings Figma forward).
+function untilVisible(ms){
+ if(document.visibilityState==='visible') return Promise.resolve();
+ post({type:'show'});
+ return new Promise(r=>{ const t0=Date.now(); const chk=()=>{ if(document.visibilityState==='visible' || Date.now()-t0>ms) r(); else setTimeout(chk,250); }; document.addEventListener('visibilitychange', chk, {once:true}); chk(); });
+}
+// --- HTML → layout -------------------------------------------------------------------------------
+// figma_import_html: the page renders in a sandboxed frame inside this window (no same-origin, so it
+// cannot reach the pairing key), measures itself and posts back a tree of boxes and computed styles.
+// The plugin's main thread then turns that tree into frames and text.
+function htmlExtractor(WAIT) {
+  const SKIP=new Set(['SCRIPT','STYLE','HEAD','NOSCRIPT','TEMPLATE','META','LINK','TITLE','BASE']);
+  const REPLACED=new Set(['IMG','SVG','INPUT','TEXTAREA','SELECT','BUTTON','IFRAME','VIDEO','CANVAS','PICTURE','OBJECT','EMBED']);
+  const MAX=5000, warn=new Set(); let count=0;
+  const ctx=document.createElement('canvas').getContext('2d');
+  function hex(c) {
+    if (!c || c === 'transparent' || c === 'none') return null;
+    ctx.fillStyle='#000'; ctx.fillStyle=c; const v=String(ctx.fillStyle);
+    if (v[0] === '#') return v.toUpperCase();
+    const m=v.match(/rgba?\(([^)]+)\)/); if (!m) return null;
+    const p=m[1].split(/[\s,\/]+/).filter(Boolean).map(parseFloat), a=p.length > 3 ? p[3] : 1;
+    if (a <= 0) return null;
+    const h=x=>Math.round(Math.max(0,Math.min(255,x))).toString(16).padStart(2,'0');
+    return ('#'+h(p[0])+h(p[1])+h(p[2])+(a < 1 ? h(a*255) : '')).toUpperCase();
+  }
+  function splitTop(s) {
+    const out=[]; let d=0, cur='';
+    for (const ch of s) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && d === 0) { out.push(cur.trim()); cur=''; } else cur+=ch; }
+    if (cur.trim()) out.push(cur.trim()); return out;
+  }
+  const DIR={'to top':0,'to right':90,'to bottom':180,'to left':270,'to top right':45,'to right top':45,'to bottom right':135,'to right bottom':135,'to bottom left':225,'to left bottom':225,'to top left':315,'to left top':315};
+  function gradients(bg) {
+    const out=[];
+    for (const layer of splitTop(bg).reverse()) {   // CSS lists the top layer first, Figma the bottom one
+      const m=/^(repeating-)?(linear|radial|conic)-gradient\((.*)\)$/.exec(layer.trim());
+      if (!m) { if (/url\(/.test(layer) && !/data:/.test(layer)) warn.add('Фоновые картинки по внешним ссылкам пропущены'); continue; }
+      const parts=splitTop(m[3]); let angle=180, first=parts[0];
+      if (m[2] === 'linear') {
+        const a=/^(-?[\d.]+)(deg|turn|rad|grad)$/.exec(first);
+        if (a) { const v=parseFloat(a[1]); angle=a[2]==='deg'?v:a[2]==='turn'?v*360:a[2]==='rad'?v*180/Math.PI:v*0.9; parts.shift(); }
+        else if (DIR[first]) { angle=DIR[first]; parts.shift(); }
+      } else if (!hex(first.split(/\s(?![^(]*\))/)[0])) parts.shift();   // radial/conic shape or position
+      const stops=[];
+      for (const st of parts) {
+        const sm=/^(.*?)(?:\s+(-?[\d.]+)(%|px))?(?:\s+(-?[\d.]+)(%|px))?$/.exec(st); if (!sm) continue;
+        const c=hex(sm[1]); if (!c) continue;
+        stops.push({color:c.length === 9 ? c : c, position:sm[3] === '%' ? parseFloat(sm[2])/100 : null});
+      }
+      if (stops.length < 2) continue;
+      stops.forEach((s,i)=>{ if (s.position === null) s.position=i/(stops.length-1); s.position=Math.max(0,Math.min(1,s.position)); });
+      out.push(m[2] === 'linear' ? {type:'GRADIENT_LINEAR', angle, stops} : {type:m[2] === 'radial' ? 'GRADIENT_RADIAL' : 'GRADIENT_ANGULAR', stops});
+    }
+    return out;
+  }
+  function shadows(s) {
+    if (!s || s === 'none') return [];
+    return splitTop(s).map(x=>{
+      const c=x.match(/rgba?\([^)]*\)|#[0-9a-f]{3,8}/i), n=(x.replace(c ? c[0] : '', '').match(/-?[\d.]+px/g) || []).map(parseFloat);
+      const col=hex(c ? c[0] : 'black');   // null for fully transparent: frameworks pad lists with those
+      if (!col) return null;
+      return {type:/\binset\b/.test(x) ? 'INNER_SHADOW' : 'DROP_SHADOW', color:col, x:n[0]||0, y:n[1]||0, blur:n[2]||0, spread:n[3]||0};
+    }).filter(Boolean).reverse();
+  }
+  const box=el=>{ const r=el.getBoundingClientRect(); return {x:r.left+scrollX, y:r.top+scrollY, w:r.width, h:r.height}; };
+  function visual(el, cs, b) {
+    const v={}; let need=false;
+    const bg=hex(cs.backgroundColor); if (bg) { v.fill=bg; need=true; }
+    if (cs.backgroundImage && cs.backgroundImage !== 'none') {
+      const g=gradients(cs.backgroundImage); if (g.length) { v.gradients=g; need=true; }
+      const u=cs.backgroundImage.match(/url\("?(data:[^")]+)"?\)/); if (u) { v.image=u[1]; v.imageSize=cs.backgroundSize; need=true; }
+    }
+    const sides=['Top','Right','Bottom','Left'];
+    const bw=sides.map(s=>/none|hidden/.test(cs['border'+s+'Style']) ? 0 : parseFloat(cs['border'+s+'Width']) || 0);
+    const i=bw.findIndex(x=>x > 0);
+    if (i !== -1) {
+      const c=hex(cs['border'+sides[i]+'Color']);
+      if (c) { v.stroke=c; v.strokeWeights=bw; need=true; const st=cs['border'+sides[i]+'Style']; if (st === 'dashed') v.dash=[bw[i]*3, bw[i]*2]; if (st === 'dotted') v.dash=[bw[i], bw[i]]; }
+    }
+    const lim=Math.min(b.w, b.h)/2;
+    const rad=['TopLeft','TopRight','BottomRight','BottomLeft'].map(k=>{ const raw=cs['border'+k+'Radius'].split(' ')[0], n=parseFloat(raw) || 0; return Math.min(/%/.test(raw) ? n/100*Math.min(b.w,b.h) : n, lim); });
+    if (rad.some(x=>x > 0)) v.radii=rad;
+    const sh=shadows(cs.boxShadow); if (sh.length) { v.effects=sh; need=true; }
+    const blur=/blur\(([\d.]+)px\)/.exec(cs.backdropFilter || cs.webkitBackdropFilter || '');
+    if (blur) { (v.effects=v.effects || []).push({type:'BACKGROUND_BLUR', radius:parseFloat(blur[1])}); need=true; }
+    const lblur=/blur\(([\d.]+)px\)/.exec(cs.filter || '');
+    if (lblur) { (v.effects=v.effects || []).push({type:'LAYER_BLUR', radius:parseFloat(lblur[1])}); need=true; }
+    const op=parseFloat(cs.opacity); if (op < 1) { v.opacity=op; need=true; }
+    if ((cs.overflowX !== 'visible' || cs.overflowY !== 'visible') && el.children.length) { v.clip=true; need=true; }
+    return need ? v : null;
+  }
+  function tstyle(cs) {
+    const d=cs.textDecorationLine || '';
+    return {family:cs.fontFamily, weight:parseInt(cs.fontWeight) || 400, italic:cs.fontStyle !== 'normal', size:parseFloat(cs.fontSize) || 16,
+      color:hex(cs.color) || '#000000', lh:cs.lineHeight === 'normal' ? null : parseFloat(cs.lineHeight), ls:cs.letterSpacing === 'normal' ? 0 : parseFloat(cs.letterSpacing) || 0,
+      deco:d.indexOf('underline') !== -1 ? 'UNDERLINE' : d.indexOf('line-through') !== -1 ? 'STRIKETHROUGH' : 'NONE', tt:cs.textTransform, align:cs.textAlign};
+  }
+  function isTextBlock(el) {
+    let text=false;
+    for (const n of el.childNodes) {
+      if (n.nodeType === 3) { if (n.data.trim()) text=true; continue; }
+      if (n.nodeType !== 1) continue;
+      const t=n.tagName.toUpperCase();
+      if (t === 'BR' || SKIP.has(t)) continue;
+      if (REPLACED.has(t)) return false;
+      const cs=getComputedStyle(n);
+      if (cs.display === 'none') continue;
+      if (cs.display !== 'inline') return false;
+      const r=isTextBlock(n); if (r === false) return false; if (r) text=true;
+    }
+    return text ? true : null;
+  }
+  function collect(el) {
+    const out=[];
+    for (const n of el.childNodes) {
+      if (n.nodeType === 3) out.push({t:n.data, el:n.parentElement});
+      else if (n.nodeType === 1) {
+        const t=n.tagName.toUpperCase();
+        if (t === 'BR') out.push({t:'\n', el, br:true});
+        else if (!SKIP.has(t) && getComputedStyle(n).display !== 'none') out.push(...collect(n));
+      }
+    }
+    return out;
+  }
+  function textNode(el, cs, segs, range) {
+    const pre=/^pre|break-spaces/.test(cs.whiteSpace);
+    let chars=''; const runs=[];
+    for (const sg of segs) {
+      let t=sg.t;
+      if (!pre && !sg.br) { t=t.replace(/[ \t\n\r\f]+/g, ' '); if (chars === '' || /[ \n]$/.test(chars)) t=t.replace(/^ /, ''); }
+      if (!t) continue;
+      runs.push({s:chars.length, e:chars.length+t.length, el:sg.el}); chars+=t;
+    }
+    if (!pre) chars=chars.replace(/ +$/, '');
+    if (!chars.trim()) return null;
+    const base=tstyle(cs), ranges=[];
+    for (const r of runs) {
+      if (r.el === el || r.s >= chars.length) continue;
+      const st=tstyle(getComputedStyle(r.el)), d={s:r.s, e:Math.min(r.e, chars.length)};
+      if (st.weight !== base.weight) d.weight=st.weight;
+      if (st.italic !== base.italic) d.italic=st.italic;
+      if (st.family !== base.family) d.family=st.family;
+      if (st.size !== base.size) d.size=st.size;
+      if (st.color !== base.color) d.color=st.color;
+      if (st.deco !== base.deco) d.deco=st.deco;
+      if (Object.keys(d).length > 2) ranges.push(d);
+    }
+    const rects=Array.from(range.getClientRects()).filter(r=>r.width > 0 && r.height > 0);
+    if (!rects.length) return null;
+    const tops=[]; for (const r of rects) if (!tops.some(t=>Math.abs(t-r.top) < base.size*0.5)) tops.push(r.top);
+    const all=range.getBoundingClientRect(), lh=base.lh || null;
+    const firstH=rects[0].height, lead=lh ? (lh-firstH)/2 : 0;
+    const node={k:'text', chars, style:base, ranges, y:all.top+scrollY-lead, href:linkOf(el)};
+    if (tops.length <= 1) { node.x=all.left+scrollX; node.w=all.width; node.h=lh || all.height; node.multi=false; }
+    else {
+      const b=el.getBoundingClientRect(), pl=parseFloat(cs.paddingLeft)+parseFloat(cs.borderLeftWidth), pr=parseFloat(cs.paddingRight)+parseFloat(cs.borderRightWidth);
+      const left=Math.min(all.left, b.left+pl), right=Math.max(all.right, b.right-pr);
+      node.x=left+scrollX; node.w=right-left+1; node.h=all.height+2*lead; node.multi=true;
+    }
+    return node;
+  }
+  function inputNode(el, cs, b, into) {
+    const t=el.tagName.toUpperCase(), type=(el.type || '').toLowerCase();
+    if (type === 'checkbox' || type === 'radio') return;
+    let text=t === 'SELECT' ? (el.options[el.selectedIndex] || {}).text || '' : el.value || '', color=hex(cs.color) || '#000000';
+    if (!text && el.placeholder) { text=el.placeholder; color=hex(getComputedStyle(el, '::placeholder').color) || '#9DACCE'; }
+    if (!text) return;
+    const st=tstyle(cs); st.color=color;
+    const pl=parseFloat(cs.paddingLeft)+parseFloat(cs.borderLeftWidth), pt=parseFloat(cs.paddingTop)+parseFloat(cs.borderTopWidth);
+    const lh=st.lh || st.size*1.2;
+    into.push({k:'text', chars:text, style:st, ranges:[], x:b.x+pl, y:t === 'TEXTAREA' ? b.y+pt : b.y+(b.h-lh)/2, w:b.w-2*pl, h:lh, multi:t === 'TEXTAREA'});
+  }
+  function svgNode(el, b, cs) {
+    const clone=el.cloneNode(true), src=[el, ...el.querySelectorAll('*')], dst=[clone, ...clone.querySelectorAll('*')];
+    src.forEach((s,i)=>{
+      const c=getComputedStyle(s), d=dst[i]; if (!d || !d.setAttribute) return;
+      for (const k of ['fill','stroke']) { const v=c[k]; if (v && v !== 'none' && !/url\(/.test(v)) { const h=hex(v); if (h) d.setAttribute(k, h.slice(0,7)); } else if (v === 'none') d.setAttribute(k, 'none'); }
+      if (c.strokeWidth && c.stroke !== 'none') d.setAttribute('stroke-width', parseFloat(c.strokeWidth));
+    });
+    clone.setAttribute('width', b.w); clone.setAttribute('height', b.h);
+    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    const color=hex(cs.color) || '#000000';
+    return {k:'svg', name:'svg', href:linkOf(el), x:b.x, y:b.y, w:b.w, h:b.h, svg:new XMLSerializer().serializeToString(clone).replace(/currentColor/g, color.slice(0,7))};
+  }
+  // Decorative ::before/::after (dots, badges, underlines). Only absolutely positioned ones can be
+  // measured from their insets; text-only pseudo content is left out.
+  function pseudoNode(el, cs, b, which) {
+    const ps=getComputedStyle(el, which);
+    if (!ps || ps.content === 'none' || ps.content === 'normal' || ps.display === 'none' || ps.visibility === 'hidden') return null;
+    if (ps.position !== 'absolute' && ps.position !== 'fixed') return null;
+    const n=v=>{ const x=parseFloat(v); return isNaN(x) ? null : x; };
+    const bl=parseFloat(cs.borderLeftWidth)||0, bt=parseFloat(cs.borderTopWidth)||0, br=parseFloat(cs.borderRightWidth)||0, bb=parseFloat(cs.borderBottomWidth)||0;
+    const iw=b.w-bl-br, ih=b.h-bt-bb;
+    let L=n(ps.left), T=n(ps.top), R=n(ps.right), B=n(ps.bottom), W=n(ps.width), H=n(ps.height);
+    if (W === null) W=L !== null && R !== null ? iw-L-R : 0;
+    if (H === null) H=T !== null && B !== null ? ih-T-B : 0;
+    if (L === null) L=R !== null ? iw-R-W : 0;
+    if (T === null) T=B !== null ? ih-B-H : 0;
+    if (W <= 0 || H <= 0) return null;
+    const box={x:b.x+bl+L, y:b.y+bt+T, w:W, h:H};
+    const v=visual(el, ps, box); if (!v) return null;
+    return {k:'frame', name:nm(el)+which, x:box.x, y:box.y, w:box.w, h:box.h, v, children:[]};
+  }
+  // Where a layer leads: kept on the layer so a prototype rebuilt from the design keeps its links.
+  const linkOf=el=>{ const a=el && el.closest && el.closest('a[href]'); const h=a && a.getAttribute('href'); return h && !/^(javascript:|#$)/i.test(h) ? h : undefined; };
+  const nm=el=>el.tagName.toLowerCase()+(el.id ? '#'+el.id : el.classList && el.classList[0] ? '.'+el.classList[0] : '');
+  function walk(el, out) {
+    if (count > MAX) { warn.add('Элементов больше '+MAX+' — импорт обрезан'); return; }
+    const cs=getComputedStyle(el), tag=el.tagName.toUpperCase();
+    if (cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) === 0) return;
+    if (cs.display === 'contents') { for (const c of el.children) walk(c, out); return; }
+    const b=box(el);
+    if (tag === 'SVG') { if (b.w && b.h) { out.push(svgNode(el, b, cs)); count++; } return; }
+    if (tag === 'IMG' || tag === 'VIDEO' || tag === 'CANVAS' || tag === 'IFRAME') {
+      if (!b.w || !b.h) return;
+      let src=tag === 'IMG' ? el.currentSrc || el.src : tag === 'CANVAS' ? (()=>{ try { return el.toDataURL(); } catch (e) { return null; } })() : null;
+      if (src && !/^data:/.test(src)) src=null;
+      const v=visual(el, cs, b);
+      out.push({k:'image', name:nm(el)+(el.alt ? ' — '+el.alt : ''), href:linkOf(el), x:b.x, y:b.y, w:b.w, h:b.h, src, fit:cs.objectFit, radii:v && v.radii}); count++;
+      return;
+    }
+    let v=visual(el, cs, b), target=out;
+    const isInput=tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+    if (isInput && /checkbox|radio/.test(el.type || '') && !v) {
+      v={fill:el.checked ? (hex(cs.accentColor) || '#0D4CD3') : '#FFFFFF', stroke:el.checked ? null : '#767676', strokeWeights:[1,1,1,1], radii:el.type === 'radio' ? [b.w/2,b.w/2,b.w/2,b.w/2] : [2,2,2,2]};
+      if (!v.stroke) delete v.stroke;
+    }
+    if (v || isInput) {
+      const node={k:'frame', name:nm(el), x:b.x, y:b.y, w:b.w, h:b.h, v:v || {}, children:[], href:linkOf(el)};
+      if (isInput) node.input={tag:tag.toLowerCase(), type:(el.type || '').toLowerCase(), placeholder:el.placeholder || '', value:tag === 'SELECT' ? '' : (el.value || ''), name:el.name || el.id || '', checked:!!el.checked};
+      out.push(node); target=node.children; count++;
+    }
+    if (isInput) { inputNode(el, cs, b, target); return; }
+    for (const pseudo of ['::before','::after']) { const pn=pseudoNode(el, cs, b, pseudo); if (pn) { target.push(pn); count++; } }
+    if (isTextBlock(el) === true) {
+      const r=document.createRange(); r.selectNodeContents(el);
+      const t=textNode(el, cs, collect(el), r); if (t) { target.push(t); count++; }
+      return;
+    }
+    for (const ch of el.childNodes) {
+      if (ch.nodeType === 3 && ch.data.trim()) {
+        const r=document.createRange(); r.selectNode(ch);
+        const t=textNode(el, cs, [{t:ch.data, el}], r); if (t) { target.push(t); count++; }
+      } else if (ch.nodeType === 1 && !SKIP.has(ch.tagName.toUpperCase())) walk(ch, target);
+    }
+  }
+  let tries=0;
+  function run() {
+    try {
+      if (!document.body || document.body.getBoundingClientRect().width === 0) {
+        if (++tries < 8) { setTimeout(run, 400); return; }
+        throw Error('Окно плагина скрыто или свёрнуто до нуля: HTML не на чем отрисовать. Разверните окно плагина и не сворачивайте Figma.');
+      }
+      const de=document.documentElement;
+      const W=Math.max(de.scrollWidth, document.body.scrollWidth, innerWidth), H=Math.max(de.scrollHeight, document.body.scrollHeight, innerHeight);
+      const bg=hex(getComputedStyle(document.body).backgroundColor) || hex(getComputedStyle(de).backgroundColor) || '#FFFFFF';
+      const nodes=[]; const bcs=getComputedStyle(document.body);
+      if (isTextBlock(document.body) === true) { const r=document.createRange(); r.selectNodeContents(document.body); const t=textNode(document.body, bcs, collect(document.body), r); if (t) nodes.push(t); }
+      else for (const ch of document.body.childNodes) {
+        if (ch.nodeType === 3 && ch.data.trim()) { const r=document.createRange(); r.selectNode(ch); const t=textNode(document.body, bcs, [{t:ch.data, el:document.body}], r); if (t) nodes.push(t); }
+        else if (ch.nodeType === 1 && !SKIP.has(ch.tagName.toUpperCase())) walk(ch, nodes);
+      }
+      parent.postMessage({__figmaLayout:{w:Math.ceil(W), h:Math.ceil(H), bg, title:document.title, nodes, count, warnings:[...warn]}}, '*');
+    } catch (e) { parent.postMessage({__figmaLayout:{error:String(e && e.message || e)}}, '*'); }
+  }
+  // Plain timers only: a hidden frame gets no animation frames, and fonts.ready may never settle.
+  const fontsReady=document.fonts && document.fonts.ready ? Promise.race([document.fonts.ready, new Promise(r=>setTimeout(r, 3000))]) : Promise.resolve();
+  const go=()=>fontsReady.then(()=>setTimeout(run, WAIT));
+  if (document.readyState === 'complete') go(); else addEventListener('load', go);
+}
+async function layoutHtml(a) {
+  await untilVisible(15000);
+  return new Promise((resolve, reject)=>{
+    const W=Math.max(320, Math.min(Number(a.width) || 1440, 3840)), H=Math.max(200, Math.min(Number(a.height) || 900, 4000));
+    const wait=Math.max(0, Math.min(Number(a.wait) || 300, 10000));
+    const f=document.createElement('iframe');
+    f.setAttribute('sandbox', 'allow-scripts');
+    // Fully transparent or off-screen frames count as hidden and never get laid out; 1% opacity
+    // inside the window is effectively invisible but rendered.
+    f.style.cssText='position:fixed;left:0;top:0;border:0;opacity:0.01;pointer-events:none;z-index:2147483647;width:'+W+'px;height:'+H+'px;';
+    const inject='<script>('+htmlExtractor.toString()+')('+wait+');<\/script>';
+    let html=String(a.html);
+    const at=html.search(/<\/body>(?![\s\S]*<\/body>)/i);
+    html=at === -1 ? html+inject : html.slice(0, at)+inject+html.slice(at);
+    const timer=setTimeout(()=>{ done(); reject(Error('HTML не отрисовался за '+Math.round((wait+25000)/1000)+' с')); }, wait+25000);
+    function onMsg(e) {
+      if (e.source !== f.contentWindow || !e.data || !e.data.__figmaLayout) return;
+      done(); const d=e.data.__figmaLayout; d.error ? reject(Error(d.error)) : resolve(d);
+    }
+    function done() { clearTimeout(timer); window.removeEventListener('message', onMsg); f.remove(); }
+    window.addEventListener('message', onMsg);
+    f.srcdoc=html;
+    document.body.appendChild(f);
+  });
+}
+// --- code layers: play the selected one live -------------------------------------------------------
+// The frame has scripts but no same-origin access, so the page cannot reach this window, the
+// pairing key or the Figma document - the same isolation Figma gives its own Code Layers.
+let codeSel=null, liveRun=null;
+let linkSel=null;
+function showLink(link){
+ linkSel=link; const row=$('linkrow'); row.classList.toggle('on',!!link);
+ if(!link)return;
+ $('linkname').textContent='Ссылка у «'+link.name+'»';
+ const sel=$('linksel'); sel.innerHTML='';
+ const add=(v,t)=>{ const o=document.createElement('option'); o.value=v; o.textContent=t; sel.appendChild(o); };
+ add('','— никуда —');
+ for(const p of link.pages||[]) add(p,'→ '+p);
+ if(link.href && !(link.pages||[]).includes(link.href)) add(link.href,'→ '+link.href);
+ sel.value=link.href||'';
+}
+$('linksel').onchange=e=>{ if(linkSel){ linkSel.href=e.target.value; post({type:'setLink',id:linkSel.id,href:e.target.value}); } };
+function showCodeSel(layer){
+ codeSel=layer;
+ $('codebar').classList.toggle('on',!!layer); $('minirun').classList.toggle('on',!!layer); document.body.classList.toggle('hascode',!!layer);
+ if(!document.body.classList.contains('playing')) setTimeout(applyUi,0);
+ if(layer)$('codename').textContent='</> '+layer.name;
+}
+function runRequest(){ if(codeSel)post({type:'runCodeLayer',id:codeSel.id}); }
+$('runcode').onclick=runRequest; $('minirun').onclick=runRequest;
+$('mkproto').onclick=()=>{ if(codeSel)post({type:'makePrototype',id:codeSel.id}); };
+$('editconn').onclick=()=>{document.body.classList.add('editing');lock(false);applyUi();};
+// Packed multi-page projects: the page asks to navigate, the player loads the target as a fresh
+// document (clean scripts and listeners) and keeps the history for Back.
+function unpackPages(code){
+ const m=/<script id="__figma_pages" type="application\/json" data-entry="([^"]*)">([\s\S]*?)<\/script><script id="__figma_router">[\s\S]*?<\/script>/.exec(code);
+ if(!m)return null;
+ try{ return {entry:m[1], pages:JSON.parse(m[2]), pack:m[0]}; }catch(e){ return null; }
+}
+// Injected into every page the player shows: drives it for the AI (click/fill), snapshots its
+// current state for "Снять в макет" and lets the user point at an element to ask for an edit.
+function pageDriver(){
+ if(window.__figmaDriver) return; window.__figmaDriver=true;
+ function find(q){
+  try{ var el=document.querySelector(q); if(el) return el; }catch(e){}
+  var t=String(q).trim().toLowerCase(), all=document.querySelectorAll('a,button,[role=button],input[type=submit],input[type=button],label,summary');
+  for(var i=0;i<all.length;i++){ var x=(all[i].innerText||all[i].value||'').trim().toLowerCase(); if(x===t) return all[i]; }
+  for(var j=0;j<all.length;j++){ var y=(all[j].innerText||all[j].value||'').trim().toLowerCase(); if(y&&y.indexOf(t)!==-1) return all[j]; }
+  /* Buttons made of divs and spans: the innermost element with exactly this text. */
+  var any=document.body.querySelectorAll('*'), best=null;
+  for(var k=0;k<any.length;k++){ if((any[k].innerText||'').trim().toLowerCase()===t && (!best||best.contains(any[k]))) best=any[k]; }
+  return best;
+ }
+ function cssPath(el){
+  var parts=[];
+  for(var e=el; e && e.nodeType===1 && e!==document.documentElement; e=e.parentElement){
+   if(e.id){ parts.unshift('#'+CSS.escape(e.id)); break; }
+   var s=e.tagName.toLowerCase(), cls=[].filter.call(e.classList,function(c){ return c.indexOf('__figma')!==0; }).slice(0,2);
+   if(cls.length) s+='.'+cls.map(CSS.escape).join('.');
+   var sib=e.parentElement ? [].filter.call(e.parentElement.children,function(x){ return x.tagName===e.tagName; }) : [];
+   if(sib.length>1) s+=':nth-of-type('+(sib.indexOf(e)+1)+')';
+   parts.unshift(s); if(e===document.body) break;
+  }
+  return parts.join(' > ');
+ }
+ /* The page as it is now, without scripts: what JS rendered, typed values, CSS-in-JS rules. */
+ function snapshot(){
+  [].forEach.call(document.querySelectorAll('input,textarea,select'),function(el){
+   if(el.tagName==='TEXTAREA') el.textContent=el.value;
+   else if(el.tagName==='SELECT') [].forEach.call(el.options,function(o){ o.toggleAttribute('selected',o.selected); });
+   else if(el.type==='checkbox'||el.type==='radio') el.toggleAttribute('checked',el.checked);
+   else el.setAttribute('value',el.value);
+  });
+  var live=document.querySelectorAll('style,canvas'), c=document.documentElement.cloneNode(true), copy=c.querySelectorAll('style,canvas');
+  [].forEach.call(live,function(el,i){
+   var to=copy[i]; if(!to) return;
+   try{
+    if(el.tagName==='STYLE'){ var r=el.sheet&&el.sheet.cssRules; if(r&&r.length) to.textContent=[].map.call(r,function(x){ return x.cssText; }).join('\n'); }
+    else { var img=document.createElement('img'); img.src=el.toDataURL(); img.width=el.width; img.height=el.height; img.style.cssText=el.style.cssText; img.className=el.className; to.replaceWith(img); }
+   }catch(e){}
+  });
+  try{ (document.adoptedStyleSheets||[]).forEach(function(sh){ var st=document.createElement('style'); st.textContent=[].map.call(sh.cssRules,function(x){ return x.cssText; }).join('\n'); c.querySelector('head').appendChild(st); }); }catch(e){}
+  [].forEach.call(c.querySelectorAll('script,#__figma_pick_style'),function(x){ x.remove(); });
+  [].forEach.call(c.querySelectorAll('.__figma_hover'),function(x){ x.classList.remove('__figma_hover'); });
+  return '<!doctype html>'+c.outerHTML;
+ }
+ var picking=false, hover=null, st=null;
+ function over(e){ if(hover) hover.classList.remove('__figma_hover'); hover=e.target; if(hover&&hover.classList) hover.classList.add('__figma_hover'); }
+ function stopPick(){ picking=false; if(hover) hover.classList.remove('__figma_hover'); hover=null; if(st) st.remove(); st=null;
+  removeEventListener('mouseover',over,true); removeEventListener('click',pick,true); removeEventListener('keydown',esc,true); }
+ function esc(e){ if(e.key==='Escape'){ e.preventDefault(); stopPick(); parent.postMessage({__figmaPicked:null},'*'); } }
+ function pick(e){
+  e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+  var el=e.target; stopPick(); if(el.getAttribute('class')==='') el.removeAttribute('class'); var r=el.getBoundingClientRect();
+  parent.postMessage({__figmaPicked:{selector:cssPath(el), tag:el.tagName.toLowerCase(), text:(el.innerText||el.value||el.getAttribute('aria-label')||'').trim().replace(/\s+/g,' ').slice(0,200),
+   html:el.outerHTML.slice(0,600), rect:{x:Math.round(r.left+scrollX), y:Math.round(r.top+scrollY), w:Math.round(r.width), h:Math.round(r.height)}}},'*');
+ }
+ function startPick(){
+  if(picking) return; picking=true;
+  st=document.createElement('style'); st.id='__figma_pick_style'; st.textContent='.__figma_hover{outline:2px solid #0D99FF!important;outline-offset:1px!important;cursor:crosshair!important}';
+  document.head.appendChild(st);
+  addEventListener('mouseover',over,true); addEventListener('click',pick,true); addEventListener('keydown',esc,true);
+ }
+ addEventListener('message',function(e){
+  if(e.source!==parent||!e.data||!e.data.__figmaDo) return;
+  var d=e.data.__figmaDo, out=[];
+  if(d.pick!==undefined){ d.pick ? startPick() : stopPick(); return; }
+  if(d.snapshot){ var html=''; try{ html=snapshot(); }catch(err){} parent.postMessage({__figmaSnapshot:{html:html, title:document.title}},'*'); return; }
+  (d.fill||[]).forEach(function(f){
+   var el=find(f.selector); if(!el){ out.push('нет поля '+f.selector); return; }
+   el.focus(); el.value=f.value; el.dispatchEvent(new Event('input',{bubbles:true})); el.dispatchEvent(new Event('change',{bubbles:true})); out.push('заполнено '+f.selector);
+  });
+  if(d.click){ var el=find(d.click); if(el){ el.click(); out.push('нажато «'+((el.innerText||el.value||d.click).trim())+'»'); } else out.push('не найдено «'+d.click+'»'); }
+  parent.postMessage({__figmaResult:out.join('; ')||'готово'},'*');
+ });
+}
+const DRIVER='<script id="__figma_driver">('+pageDriver.toString()+')();<\/script>';
+function withDriver(h){ const at=h.search(/<\/body>(?![\s\S]*<\/body>)/i); return at<0 ? h+DRIVER : h.slice(0,at)+DRIVER+h.slice(at); }
+function showPage(name){
+ const r=liveRun; if(!r)return;
+ r.current=name;
+ let html=r.code;
+ if(r.multi){
+  const h=r.multi.pages[name]; if(h===undefined)return;
+  const at=h.search(/<\/body>(?![\s\S]*<\/body>)/i);
+  html=at<0 ? h+r.multi.pack : h.slice(0,at)+r.multi.pack+h.slice(at);
+  $('rpages').value=name;
+ }
+ html=withDriver(html); setPicking(false);
+ $('rback').disabled=!r.stack.length;
+ const f=$('rframe');
+ if(f.getAttribute('srcdoc')===html) f.removeAttribute('srcdoc');   // same page again: force a fresh load
+ f.srcdoc=html;
+}
+function navigate(name){ const r=liveRun; if(!r||!r.multi||r.multi.pages[name]===undefined||name===r.current)return; r.stack.push(r.current); showPage(name); }
+function goBack(){ const r=liveRun; if(r&&r.stack.length)showPage(r.stack.pop()); }
+function openRunner(m){
+ const multi=unpackPages(m.code);
+ const vw=Math.max(200,m.w||1440), vh=Math.max(150,m.h||900);
+ liveRun={id:m.id, code:m.code, name:m.name, multi, stack:[], current:multi?multi.entry:null, w:vw, h:vh};
+ // In place: the window covers the screen on the canvas, the page is scaled to the canvas zoom.
+ const ip=m.inPlace;
+ const ww=ip ? Math.min(ip.w,2400) : Math.min(vw,1440), wh=ip ? Math.min(ip.h,1560)+37 : Math.min(vh+37,960);
+ const scale=ip ? Math.min(ww/vw, (wh-37)/vh) : Math.min(1, ww/vw, (wh-37)/vh);
+ const f=$('rframe');
+ f.style.width=vw+'px'; f.style.height=vh+'px'; f.style.transform=scale<1?'scale('+scale+')':'';
+ $('rname').textContent='</> '+(m.name||'Код')+(m.mode==='design'?' · из макета':''); $('rscale').textContent=scale<1?Math.round(scale*100)+'%':'';
+ const sel=$('rpages'); sel.innerHTML='';
+ if(multi){ for(const p of Object.keys(multi.pages).sort((x,y)=>x===multi.entry?-1:y===multi.entry?1:x.localeCompare(y))){ const o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); } }
+ sel.hidden=!multi;
+ document.body.classList.add('playing');
+ post({type:'resize',w:ww,h:wh});
+ showPage(liveRun.current);
+}
+// figma_code_layer_run with page / click / fill: drive the prototype and report where it ended up.
+let actionWaiter=null;
+function runActions(m, fresh){
+ return new Promise(resolve=>{
+  const results=[];
+  const finish=()=>resolve({page:liveRun ? liveRun.current : null, pages:liveRun && liveRun.multi ? Object.keys(liveRun.multi.pages) : null, result:results.join('; ') || null});
+  const act=()=>{
+   if(!(m.click || (m.fill && m.fill.length))) return setTimeout(finish, 300);
+   actionWaiter=t=>{ results.push(t); actionWaiter=null; setTimeout(finish, 1000); };   // a click may load another page
+   const w=$('rframe').contentWindow; if(w) w.postMessage({__figmaDo:{click:m.click || null, fill:m.fill || []}}, '*');
+   setTimeout(()=>{ if(actionWaiter) actionWaiter('страница не ответила'); }, 3000);
+  };
+  if(m.page && liveRun && liveRun.multi){ if(liveRun.multi.pages[m.page]===undefined) results.push('нет страницы '+m.page); else if(m.page!==liveRun.current){ liveRun.stack.push(liveRun.current); showPage(m.page); } setTimeout(act, 900); }
+  else setTimeout(act, fresh ? 900 : 100);
+ });
+}
+async function handleRun(m){
+ const fresh=!(m.keep && liveRun && liveRun.id===m.id);
+ if(fresh) openRunner(m);
+ const out=await runActions(m, fresh);
+ let tree=null, extractError=null;
+ if(m.extract){ try{ tree=await snapshotTree(); }catch(e){ extractError=String(e.message||e); } }
+ post({type:'runnerDone', token:m.token, page:out.page, pages:out.pages, result:out.result, tree, extractError});
+}
+// "Снять в макет": the page's current state, laid out like an HTML import.
+let snapWaiter=null;
+function snapshotTree(){
+ return new Promise((resolve,reject)=>{
+  const w=liveRun && $('rframe').contentWindow; if(!w) return reject(Error('Прототип не запущен'));
+  const t=setTimeout(()=>{ snapWaiter=null; reject(Error('страница не ответила на снимок')); }, 5000);
+  snapWaiter=s=>{ clearTimeout(t); snapWaiter=null;
+   if(!s.html) return reject(Error('страница не отдала снимок'));
+   layoutHtml({html:s.html, width:liveRun.w, height:liveRun.h, wait:200}).then(resolve, reject); };
+  w.postMessage({__figmaDo:{snapshot:true}}, '*');
+ });
+}
+function toast(text){ const t=$('rtoast'); t.textContent=text; t.classList.add('on'); clearTimeout(toast.timer); toast.timer=setTimeout(()=>t.classList.remove('on'), 2600); }
+$('rshot').onclick=async()=>{
+ if(!liveRun)return; const b=$('rshot'); b.disabled=true; toast('Снимаю экран в макет…');
+ try{ const tree=await snapshotTree(); post({type:'extractState', id:liveRun.id, page:liveRun.current, tree}); toast('Снимок добавлен рядом со слоем кода'); }
+ catch(e){ toast('Не получилось: '+(e.message||e)); }
+ finally{ b.disabled=false; }
+};
+// Point and edit: the user clicks an element and writes what to change; the AI reads it with figma_code_layer_get.
+let picked=null;
+function setPicking(on){ $('rpick').classList.toggle('on',on); const w=$('rframe').contentWindow; if(w) w.postMessage({__figmaDo:{pick:on}}, '*'); }
+$('rpick').onclick=()=>{ if(!liveRun)return; const on=!$('rpick').classList.contains('on'); $('pickbar').classList.remove('on'); setPicking(on); if(on) toast('Кликните по элементу на странице · Esc — отмена'); };
+function showPicked(p){
+ $('rpick').classList.remove('on');
+ if(!p){ return; }
+ picked=Object.assign({page:liveRun && liveRun.current}, p);
+ $('pickwhat').textContent='<'+p.tag+'> '+(p.text ? '«'+p.text.slice(0,60)+'»' : p.selector);
+ $('picknote').value=''; $('pickbar').classList.add('on'); setTimeout(()=>$('picknote').focus(), 30);
+}
+$('pickcancel').onclick=()=>{ picked=null; $('pickbar').classList.remove('on'); };
+$('picksave').onclick=()=>{
+ const note=$('picknote').value.trim(); if(!picked||!liveRun)return;
+ if(!note){ $('picknote').focus(); return; }
+ post({type:'addRequest', id:liveRun.id, req:Object.assign({}, picked, {note})});
+ picked=null; $('pickbar').classList.remove('on'); toast('Сохранено. Скажите ИИ: «сделай правки из слоя кода»');
+};
+$('picknote').onkeydown=e=>{ e.stopPropagation(); if(e.key==='Enter' && (e.metaKey||e.ctrlKey)) $('picksave').click(); else if(e.key==='Escape') $('pickcancel').click(); };
+function closeRunner(){ liveRun=null; $('rframe').srcdoc=''; $('pickbar').classList.remove('on'); document.body.classList.remove('playing'); applyUi(); }
+$('rreload').onclick=()=>{ if(liveRun){ liveRun.stack=[]; showPage(liveRun.multi?liveRun.multi.entry:null); } };
+$('rclose').onclick=closeRunner;
+$('rback').onclick=goBack;
+$('rpages').onchange=e=>navigate(e.target.value);
+window.addEventListener('message',e=>{
+ if(liveRun && e.source===$('rframe').contentWindow && e.data){
+  if(e.data.__figmaResult){ if(actionWaiter)actionWaiter(String(e.data.__figmaResult)); return; }
+  if(e.data.__figmaSnapshot){ if(snapWaiter)snapWaiter(e.data.__figmaSnapshot); return; }
+  if('__figmaPicked' in e.data){ showPicked(e.data.__figmaPicked); return; }
+  if(e.data.__figmaNavigate)navigate(String(e.data.__figmaNavigate));
+  else if(e.data.__figmaBack)goBack();
+  return;
+ }
+ // Same sender check as the main handler: Figma delivers plugin messages from either frame.
+ if(!(e.source===parent || (e.origin==='https://www.figma.com' && e.source===window.parent.parent.parent)))return;
+ const m=e.data && e.data.pluginMessage; if(!m)return;
+ if(m.type==='codeSel'){showCodeSel(m.layer);showLink(m.link||null);}
+ else if(m.type==='runCode')handleRun(m);
+});
+document.addEventListener('keydown',e=>{ if(e.key!=='Escape' || !liveRun) return; if($('pickbar').classList.contains('on')) $('pickcancel').click(); else closeRunner(); });
+// --- previews that could not render while Figma was in the background ------------------------------
+const laterPreviews=new Map(); let previewBusy=false;
+function queuePreview(id, args){ laterPreviews.set(id, args); tryPreviews(); }
+async function tryPreviews(){
+ if(previewBusy || !laterPreviews.size || document.visibilityState==='hidden') return;
+ previewBusy=true;
+ try{
+  for(const [id,args] of [...laterPreviews]){
+   try{
+    const laid=args.preview==='image' ? {tree:await layoutHtml(args)} : await layoutCodeLayer(args);
+    post({type:'refreshPreview', id, tree:laid.tree, trees:laid.trees, preview:args.preview || 'layers'});
+    laterPreviews.delete(id);
+   }catch(e){ break; }   // still not drawable: wait for the next chance
+  }
+ } finally { previewBusy=false; }
+}
+document.addEventListener('visibilitychange', tryPreviews);
+window.addEventListener('focus', tryPreviews);
+setInterval(tryPreviews, 15000);
+// A packed multi-page code layer gets every page laid out: entry first, then the rest.
+async function layoutCodeLayer(args){
+ const multi=unpackPages(String(args.html||''));
+ if(!multi) return {tree:await layoutHtml(args)};
+ // Screens in the order a person walks through them: breadth-first along the links from the entry.
+ const names=[], queue=[multi.entry], seen=new Set();
+ while(queue.length && names.length<8){
+  const n=queue.shift(); if(seen.has(n)||multi.pages[n]===undefined)continue; seen.add(n); names.push(n);
+  const re=/href\s*=\s*["']([^"'#?]+)/gi; let m;
+  while((m=re.exec(multi.pages[n]))) { const h=m[1].replace(/^\.\//,'').replace(/^\//,''); if(multi.pages[h]!==undefined && !seen.has(h)) queue.push(h); }
+ }
+ for(const n of Object.keys(multi.pages).sort()) if(names.length<8 && !seen.has(n)) names.push(n);
+ const trees=[];
+ for(const name of names) trees.push({page:name, tree:await layoutHtml(Object.assign({},args,{html:multi.pages[name]}))});
+ return {tree:trees[0].tree, trees};
+}
+async function prepareHtmlJob(job) {
+  const wasHidden=hidden;
+  if (wasHidden) { post({type:'show'}); await sleep(200); }
+  try {
+    const laid=job.action==='figma_code_layer' && job.args.preview!=='image' ? await layoutCodeLayer(job.args) : {tree:await layoutHtml(job.args)};
+    const args=Object.assign({}, job.args, laid); if(job.action!=='figma_code_layer') delete args.html;
+    return {id:job.id, action:job.action, args};
+  } finally { if (wasHidden) post({type:'hide', quiet:true}); }
+}
+connection=new FigmaBridgeConnection({info:()=>connection.fileInfo||{},
+ session,
+ visible:()=>document.visibilityState==='visible',
+ onStatus:setStatus,
+ onRunning:lock,
+ onSaved:value=>post({type:'save',value}),
+ onAddress:value=>{$('url').value=value.replace('http://localhost:','127.0.0.1:');lastVis=null;},
+ execute:async(job,context)=>{
+  if(job.action==='figma_import_html' || (job.action==='figma_code_layer' && job.args.preview!=='none')){
+   try{const prepared=await prepareHtmlJob(job);if(context.isCurrent())post(prepared);}
+   catch(error){
+    if(!context.isCurrent())return;
+    if(job.action==='figma_code_layer'){
+     context.record.later=job.args;
+     post({id:job.id,action:job.action,args:Object.assign({},job.args,{preview:'none',renderError:String(error.message||error)})});
+    }else throw error;
+   }
+  }else if(context.isCurrent())post(job);
+ }
+});
+window.addEventListener('pagehide',()=>connection.goodbye());
+post({type:'clientInfo',version:FigmaBridgeVersion});
+parent.postMessage({pluginMessage:{type:'restore?'}},'*');  // handler is ready now
+parent.postMessage({pluginMessage:{type:'uiReady'}},'*');
+$('url').onkeydown=e=>{if(e.key==='Enter')$('token').focus();};
+$('token').onkeydown=e=>{if(e.key==='Enter')$('connect').click();};
+$('reset').onclick=()=>{
+ connection.goodbye();connection.stop();lastVis=null;
+ $('url').value='';$('token').value='';
+ post({type:'clear'});
+ setStatus('Подключение сброшено. Вставьте новый адрес и ключ.');
+ $('url').focus();
+};
+$('connect').onclick=()=>{
+ try{
+  document.body.classList.remove('editing');lastVis=null;
+  connection.start($('url').value,$('token').value).catch(error=>setStatus(String(error.message||error),'err'));
+ }catch(error){setStatus(String(error.message||error),'err');}
+};
+</script>

@@ -1,0 +1,33 @@
+{
+  "name": "Figma Local MCP",
+  "id": "figma-local-mcp-dev",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": [
+    "figma"
+  ],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": [
+      "https://esm.sh",
+      "https://unpkg.com",
+      "https://cdn.jsdelivr.net",
+      "https://cdnjs.cloudflare.com",
+      "https://cdn.tailwindcss.com",
+      "https://fonts.googleapis.com",
+      "https://fonts.gstatic.com"
+    ],
+    "devAllowedDomains": [
+      "http://localhost:38471",
+      "http://localhost:38472",
+      "http://localhost:38473",
+      "http://localhost:38474"
+    ],
+    "reasoning": "HTML import and code layer previews render pages that load common CDN libraries and Google Fonts."
+  },
+  "permissions": [
+    "currentuser"
+  ],
+  "enablePrivatePluginApi": true
+}
