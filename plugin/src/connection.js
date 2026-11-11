@@ -71,6 +71,7 @@
           error.status = response.status;
           throw error;
         }
+        if (this.current(run) && body && body.update && this.options.onUpdate) this.options.onUpdate(body.update);
         return body;
       } finally {
         clearTimeout(timer);

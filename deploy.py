@@ -15,7 +15,7 @@ import uuid
 ROOT = Path(__file__).resolve().parent
 # server.py goes last: the running 2.1 server notices that file and reloads.
 FILES = (
-    'bridge_queue.py', 'multi_bridge.py', 'build_plugin.py', 'deploy.py', 'legacy_tests.py', 'upstream_tests.py', 'test_multi_bridge.py',
+    'updates.py', 'version.json', 'test_updates.py', 'bridge_queue.py', 'multi_bridge.py', 'build_plugin.py', 'deploy.py', 'legacy_tests.py', 'upstream_tests.py', 'test_multi_bridge.py',
     'test_server.py', 'test_bridge_queue.py', 'test_deploy.py',
     'tests/test_connection.mjs', 'plugin/src/connection.js', 'plugin/src/ui.html',
     'plugin/manifest.json', 'plugin/code.js', 'plugin/ui.html',

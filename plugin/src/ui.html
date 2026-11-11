@@ -1,5 +1,6 @@
 <!doctype html><meta charset="utf-8">
 <style>
+#updateNotice{margin:10px 0;padding:10px;border:1px solid var(--warn);border-radius:7px;color:var(--fg);font-size:12px} #updateNotice a{color:var(--brand)} body.mini #updateNotice{display:none}
 :root{
   --bg:var(--figma-color-bg,#fff);
   --fg:var(--figma-color-text,#1b1f26);
@@ -103,6 +104,7 @@ body.playing{padding:0;overflow:hidden}
 #rtoast.on{display:block}
 </style>
 
+<div id="updateNotice" role="status" hidden><span id="updateText"></span> <a href="https://github.com/SlavaZhivaev/figma-local-mcp#установка" target="_blank" rel="noopener noreferrer">Обновитесь на GitHub ↗</a></div>
 <div id="full">
 <div class="bar"><button class="icon" id="collapse" title="Свернуть в полоску"><svg viewBox="0 0 16 16"><path d="M4 10l4-4 4 4"/></svg></button><button class="icon hide" title="Скрыть окно — плагин продолжит работать"><svg viewBox="0 0 16 16"><path d="M2 8s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4z"/><path d="M3 13L13 3"/></svg></button></div>
 <p class="hint">Спросите адрес и ключ у ИИшки — она возьмёт их командой <code>figma_status</code></p>
@@ -761,6 +763,15 @@ connection=new FigmaBridgeConnection({info:()=>connection.fileInfo||{},
  session,
  visible:()=>document.visibilityState==='visible',
  onStatus:setStatus,
+ onUpdate:info=>{
+  const latest=info.latest;
+  const key=v=>String(v).replace(/^v/,'').split('-')[0].split('.').map(Number);
+  const a=key(latest||'0.0.0'),b=key('2.3.0');
+  const newer=a.some((v,i)=>v>b[i] && a.slice(0,i).every((n,j)=>n===b[j]));
+  const show=info.available || (latest && newer);
+  $('updateNotice').hidden=!show;
+  if(show) $('updateText').textContent='На GitHub доступна новая версия '+latest+'.';
+ },
  onRunning:lock,
  onSaved:value=>post({type:'save',value}),
  onAddress:value=>{$('url').value=value.replace('http://localhost:','127.0.0.1:');lastVis=null;},
@@ -796,4 +807,5 @@ $('connect').onclick=()=>{
   connection.start($('url').value,$('token').value).catch(error=>setStatus(String(error.message||error),'err'));
  }catch(error){setStatus(String(error.message||error),'err');}
 };
+setInterval(()=>{if(connection.running)connection.ping(document.visibilityState==='visible').catch(()=>{});},60000);
 </script>

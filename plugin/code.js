@@ -1466,7 +1466,7 @@ async function figmaPrototype(a) {
 function info() {
   let user=null; try { if (figma.currentUser) user={id:figma.currentUser.id, name:figma.currentUser.name}; } catch (e) {}
   let fileKey=null; try { fileKey=figma.fileKey || null; } catch (e) {}
-  return {pluginVersion:'2.2.1-merged', connectionVersion, user, file:figma.root.name, fileKey, editorType:figma.editorType, page:{id:figma.currentPage.id, name:figma.currentPage.name}, pages:figma.root.children.map(p=>p.name),
+  return {pluginVersion:'2.3.0', connectionVersion, user, file:figma.root.name, fileKey, editorType:figma.editorType, page:{id:figma.currentPage.id, name:figma.currentPage.name}, pages:figma.root.children.map(p=>p.name),
     selection:figma.currentPage.selection.slice(0,10).map(n=>({id:n.id, name:n.name, type:n.type}))};
 }
 

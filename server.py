@@ -14,7 +14,7 @@ import json, sys, os, re, time, subprocess, secrets, threading, uuid, urllib.req
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from concurrent.futures import ThreadPoolExecutor
 
-VERSION = '2.2.1-merged'
+VERSION = '2.3.0'
 LIMIT = 8 * 1024 * 1024           # one MCP message: big batches carry SVG markup
 RESULT_LIMIT = 48 * 1024 * 1024   # one plugin POST: screenshots come back as base64
 MAX_OPS = 500
@@ -390,7 +390,7 @@ class Handler(BaseHTTPRequestHandler):
             elif self.path == '/bye':
                 bridge.disconnect(data.get('session')); result = {'ok':True}
             elif self.path == '/ping':
-                result = {'ok':True, 'version':VERSION}
+                result = {'ok':True, 'version':VERSION, 'update':dict(update_info)}
             elif self.path == '/result':
                 result = {'ok':True, 'accepted':bridge.finish(data)}
             elif self.path == '/hello':
@@ -463,6 +463,12 @@ update_info = {'checked':False}
 
 def check_updates(where=None):
     """A git checkout tracks its upstream: figma_status then tells whether a newer version is out."""
+    if where is None:
+        from updates import check
+        info = check(VERSION)
+        info["command"] = "Download the repository and run bash install.sh; restart MCP clients and the Figma plugin."
+        update_info.clear(); update_info.update(info)
+        return info
     where = where or HERE
     env = dict(os.environ, GIT_TERMINAL_PROMPT='0')   # never hang on a credentials prompt
     def git(*a): return subprocess.run(['git','-C',where]+list(a), capture_output=True, text=True, timeout=30, env=env)
