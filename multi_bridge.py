@@ -14,6 +14,7 @@ class MultiBridge:
         self.lock = threading.RLock()
         self.sessions = {}
         self.active_files = set()
+        self.maintenance = False
 
     def poll(self, session, info=None, wait=0, visible=None):
         if not isinstance(session, str) or not 1 <= len(session) <= 100:
@@ -71,6 +72,7 @@ class MultiBridge:
                 time.sleep(.05)
         identity = entry.get('fileKey') or entry['file']
         with self.lock:
+            if self.maintenance: raise ValueError('Обновление MCP выполняется; дождитесь переподключения')
             blocked = any((e.get('fileKey') or e['file']) == identity and e['queue'].blocked for e in self.sessions.values())
             if blocked and action not in self.read_only:
                 raise ValueError('Previous command has unknown outcome; inspect the file before unblocking')

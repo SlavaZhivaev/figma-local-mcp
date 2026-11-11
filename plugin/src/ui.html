@@ -104,7 +104,7 @@ body.playing{padding:0;overflow:hidden}
 #rtoast.on{display:block}
 </style>
 
-<div id="updateNotice" role="status" hidden><span id="updateText"></span> <a href="https://github.com/SlavaZhivaev/figma-local-mcp#установка" target="_blank" rel="noopener noreferrer">Обновитесь на GitHub ↗</a></div>
+<div id="updateNotice" role="status" hidden><span id="updateText"></span> <button id="installUpdate" type="button">Обновить</button> <span id="updateProgress" role="status"></span> <a href="https://github.com/SlavaZhivaev/figma-local-mcp#установка" target="_blank" rel="noopener noreferrer">Подробнее ↗</a></div>
 <div id="full">
 <div class="bar"><button class="icon" id="collapse" title="Свернуть в полоску"><svg viewBox="0 0 16 16"><path d="M4 10l4-4 4 4"/></svg></button><button class="icon hide" title="Скрыть окно — плагин продолжит работать"><svg viewBox="0 0 16 16"><path d="M2 8s2.2-4 6-4 6 4 6 4-2.2 4-6 4-6-4-6-4z"/><path d="M3 13L13 3"/></svg></button></div>
 <p class="hint">Спросите адрес и ключ у ИИшки — она возьмёт их командой <code>figma_status</code></p>
@@ -766,10 +766,10 @@ connection=new FigmaBridgeConnection({info:()=>connection.fileInfo||{},
  onUpdate:info=>{
   const latest=info.latest;
   const key=v=>String(v).replace(/^v/,'').split('-')[0].split('.').map(Number);
-  const a=key(latest||'0.0.0'),b=key('2.3.0');
+  const a=key(latest||'0.0.0'),b=key('2.4.0');
   const newer=a.some((v,i)=>v>b[i] && a.slice(0,i).every((n,j)=>n===b[j]));
   const show=info.available || (latest && newer);
-  $('updateNotice').hidden=!show;
+  if(!$('installUpdate').disabled) $('updateNotice').hidden=!show;
   if(show) $('updateText').textContent='На GitHub доступна новая версия '+latest+'.';
  },
  onRunning:lock,
@@ -808,4 +808,17 @@ $('connect').onclick=()=>{
  }catch(error){setStatus(String(error.message||error),'err');}
 };
 setInterval(()=>{if(connection.running)connection.ping(document.visibilityState==='visible').catch(()=>{});},60000);
+$('installUpdate').onclick=async()=>{
+ const button=$('installUpdate'),progress=$('updateProgress');button.disabled=true;
+ const request=(path)=>{const run=connection.run;if(!run)throw Error('Подключитесь к серверу');return connection.request(run,path,{});};
+ try{
+  await request('/update');
+  for(;;){
+   const state=await request('/update-status');progress.textContent=state.message||'';
+   if(state.status==='error')throw Error(state.message);
+   if(state.status==='done'){post({type:'notify',text:'Figma Local MCP обновлён'});break;}
+   await sleep(1000);
+  }
+ }catch(error){progress.textContent='Не удалось обновить: '+error.message;button.disabled=false;}
+};
 </script>

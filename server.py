@@ -14,7 +14,7 @@ import json, sys, os, re, time, subprocess, secrets, threading, uuid, urllib.req
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from concurrent.futures import ThreadPoolExecutor
 
-VERSION = '2.3.0'
+VERSION = '2.4.0'
 LIMIT = 8 * 1024 * 1024           # one MCP message: big batches carry SVG markup
 RESULT_LIMIT = 48 * 1024 * 1024   # one plugin POST: screenshots come back as base64
 MAX_OPS = 500
@@ -387,6 +387,10 @@ class Handler(BaseHTTPRequestHandler):
                 session = data.get('session')
                 if not isinstance(session,str) or not 1 <= len(session) <= 100: raise ValueError('Invalid session')
                 result = bridge.poll(session, data, data.get('wait', 0), data.get('visible'))
+            elif self.path == '/update':
+                result = auto_updater.start()
+            elif self.path == '/update-status':
+                result = dict(auto_updater.state)
             elif self.path == '/bye':
                 bridge.disconnect(data.get('session')); result = {'ok':True}
             elif self.path == '/ping':
@@ -890,6 +894,20 @@ def handle(msg):
             send({'jsonrpc':'2.0','id':ident,'error':{'code':-32601,'message':'Method not found'}}); return
         send({'jsonrpc':'2.0','id':ident,'result':result})
     except Exception as e: send({'jsonrpc':'2.0','id':ident,'error':{'code':-32602,'message':str(e)}})
+
+def restart_updated_server():
+    with bridge.lock:
+        bridge.maintenance = True
+        busy = bool(bridge.active_files)
+    if busy:
+        threading.Timer(2, restart_updated_server).start(); return
+    if httpd is not None:
+        httpd.shutdown(); httpd.server_close()
+    sys.stdout.flush()
+    os.execv(sys.executable, [sys.executable, '-u', os.path.abspath(__file__)])
+
+from updater import Updater
+auto_updater = Updater(HERE, bridge, restart_updated_server)
 
 if __name__ == '__main__':
     bridge.token = load_token()
